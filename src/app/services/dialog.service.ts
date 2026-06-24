@@ -108,7 +108,10 @@ export class DialogService {
       message: 'Cargando...',
     };
     opts = { ...defaultOpts, ...opts };
-    const loading = await this.loadingCtrl.create(opts);
+    const loading = await this.loadingCtrl.create({
+      ...opts,
+      mode: 'ios',
+    });
     await loading.present();
     return loading;
   }
