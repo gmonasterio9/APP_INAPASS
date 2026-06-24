@@ -4,7 +4,7 @@ import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, Validators }
 import { EventosService } from '../services/eventos.service';
 import { DialogService } from '../services/dialog.service';
 import { Camera } from '@capacitor/camera';
-import { NavController, Platform } from '@ionic/angular';
+import { NavController, Platform, ViewWillLeave } from '@ionic/angular';
 import { UtilsService } from '../services/utils.service';
 import { RegistroAsistenciaService, RegistroResultado } from '../services/registro-asistencia.service';
 
@@ -15,7 +15,7 @@ import { RegistroAsistenciaService, RegistroResultado } from '../services/regist
   standalone: false,
 })
 
-export class RegistroManualPage implements OnInit {
+export class RegistroManualPage implements OnInit, ViewWillLeave {
 
   readonly nombreMaxLength: number;
   subiendoFoto = false;
@@ -25,6 +25,7 @@ export class RegistroManualPage implements OnInit {
   registro: any[] = [];
   currentStep: number = 1;
   isLoading = false;
+  private procesoCarnetId = 0;
   constructor(private router: Router,
               private pt: Platform,
               private fb: FormBuilder,
@@ -79,6 +80,10 @@ export class RegistroManualPage implements OnInit {
     });
   }
 
+  get procesandoCarnet(): boolean {
+    return this.isLoading || this.subiendoFoto;
+  }
+
   get nombreLongitud(): number {
     return `${this.nombre?.value ?? ''}`.length;
   }
@@ -128,16 +133,40 @@ export class RegistroManualPage implements OnInit {
   }
 
   nextStep() {
+    if (this.procesandoCarnet) {
+      return;
+    }
     if (this.validarPaso1()) {
       this.currentStep = 2;
     }
   }
   handleBack() {
-    if (this.currentStep === 2) {
-      this.currentStep = 1;
-    } else {
-      this.volverAtras();
+    if (this.procesandoCarnet) {
+      return;
     }
+    void this.cancelarFormulario();
+  }
+
+  private abortarProcesoCarnet(): void {
+    this.procesoCarnetId++;
+    this.isLoading = false;
+    this.subiendoFoto = false;
+  }
+
+  private reiniciarFormulario(): void {
+    this.abortarProcesoCarnet();
+    this.currentStep = 1;
+    this.submitted = false;
+    this.form.reset();
+  }
+
+  async cancelarFormulario(): Promise<void> {
+    this.reiniciarFormulario();
+    await this.volverAtras();
+  }
+
+  ionViewWillLeave(): void {
+    this.reiniciarFormulario();
   }
   
   
@@ -234,6 +263,19 @@ export class RegistroManualPage implements OnInit {
     });
   }
 
+  private async mostrarErrorCarnet(message: string): Promise<void> {
+    await this.dialog.showAlert({
+      header: 'Error al escanear carnet',
+      message,
+      buttons: [{ text: 'Aceptar', role: 'ok' }],
+    });
+  }
+
+  private esCancelacionCamara(error: unknown): boolean {
+    const mensaje = `${(error as { message?: string })?.message ?? error ?? ''}`.toLowerCase();
+    return mensaje.includes('cancel') || mensaje.includes('cancelled') || mensaje.includes('canceled');
+  }
+
   async validarYregistrar(rutValue: string, bodyContacto: any): Promise<RegistroResultado> {
     const [invitado, registroId, attendee] = this.utils.buscarEnArray(rutValue, "identificationNumber", this.registro);
     if(invitado){
@@ -305,6 +347,10 @@ export class RegistroManualPage implements OnInit {
   }
 
   async fotoCarnet() {
+    if (this.procesandoCarnet) {
+      return;
+    }
+
     try {
       const tienePermiso = await this.utils.tienePermisoCamara();
       if (!tienePermiso) {
@@ -313,33 +359,60 @@ export class RegistroManualPage implements OnInit {
       }
 
       const image = await Camera.getPhoto(this.utils.obtenerOpcionesFotoCarnet());
-      this.currentStep = 2;
-      this.isLoading = true; 
-      
-      const base64Image = image.base64String;
-      const timestamp = new Date().getTime();
-      const fileName = `foto_${timestamp}.jpg`;
-      if(base64Image){
-        const response = await this.uploadBase64Fragmented(base64Image, fileName);
-        if (response.success){
-          this.nombre?.setValue(this.truncarNombre(`${response.nombre} ${response.apellido1} ${response.apellido2}`));
-          this.rut?.setValue(this.utils.formatearRut(`${response.rut}`));
-        }
+      if (!image?.base64String) {
+        await this.mostrarErrorCarnet('No se pudo capturar la imagen. Intente nuevamente.');
+        return;
       }
-      else {
-        await this.dialog.showAlert({
-          header: 'Error',
-          message: 'No se pudo capturar la imagen. Intenta nuevamente.',
-        });
-              }
+
+      const procesoId = ++this.procesoCarnetId;
+      this.currentStep = 2;
+      this.isLoading = true;
+      const fileName = `foto_${Date.now()}.jpg`;
+      const response = await this.uploadBase64Fragmented(image.base64String, fileName);
+
+      if (procesoId !== this.procesoCarnetId) {
+        return;
+      }
+
+      if (!response.success) {
+        this.currentStep = 1;
+        await this.mostrarErrorCarnet(
+          response.message || 'No se pudo validar el carnet. Verifique la iluminación y que el documento esté completo en la foto.',
+        );
+        return;
+      }
+
+      if (!response.rut) {
+        this.currentStep = 1;
+        await this.mostrarErrorCarnet(
+          'No se pudieron leer los datos del carnet. Asegúrese de que la imagen sea nítida y el RUT sea visible.',
+        );
+        return;
+      }
+
+      this.nombre?.setValue(this.truncarNombre(`${response.nombre} ${response.apellido1} ${response.apellido2}`));
+      this.rut?.setValue(this.utils.formatearRut(`${response.rut}`));
+
+      if (procesoId !== this.procesoCarnetId) {
+        return;
+      }
     } catch (error) {
-      console.error(' Error al abrir la cámara o enviar la foto', error);
-    }finally{
-      this.isLoading = false; 
+      if (this.esCancelacionCamara(error)) {
+        return;
+      }
+      console.error('Error al escanear carnet', error);
+      this.currentStep = 1;
+      await this.mostrarErrorCarnet('Ocurrió un error al procesar el carnet. Intente nuevamente.');
+    } finally {
+      this.isLoading = false;
+      this.subiendoFoto = false;
     }
   }
 
-  async uploadBase64Fragmented(base64String: string, fileName: string,) {
+  async uploadBase64Fragmented(
+    base64String: string,
+    fileName: string,
+  ): Promise<{ success: boolean; nombre?: string; apellido1?: string; apellido2?: string; rut?: string; message?: string }> {
     const fragments = this.utils.divideBase64(base64String);
     const totalParts = fragments.length;
 
@@ -350,33 +423,48 @@ export class RegistroManualPage implements OnInit {
         const params = {
           file: base64Fragment,
           fileName: encodeURIComponent(fileName),
-          partNumber: partNumber,
-          totalParts: totalParts
+          partNumber,
+          totalParts,
         };
 
-        if (totalParts > 1 && partNumber == totalParts) {
-        }
         this.subiendoFoto = true;
         const result = await this.eventos.fotoCarnet(params);
         this.subiendoFoto = false;
-        if (result.success) {
-          if (result.code == 202) {
-            const progreso = Math.round(result.progress);
-          }
-          else if (result.code == 200) {
-            return result
-          }
+
+        if (!result.success) {
+          return {
+            success: false,
+            message: result.message || 'No se pudo validar el carnet. Intente nuevamente.',
+          };
         }
-        else {
-          await this.dialog.showAlert({message: "No se pudo validar el carnet. Intente nuevamente"})
-          this.currentStep = 1;
+
+        if (result.code === 202) {
+          continue;
+        }
+
+        if (result.code === 200) {
+          return {
+            success: true,
+            nombre: result.nombre,
+            apellido1: result.apellido1,
+            apellido2: result.apellido2,
+            rut: result.rut,
+          };
         }
       }
-    }
-    catch (error: any) {
-      return Promise.reject(error);
-    }
-    finally {
+
+      return {
+        success: false,
+        message: 'No se pudo validar el carnet. Intente nuevamente.',
+      };
+    } catch (error) {
+      console.error('Error al enviar foto del carnet', error);
+      return {
+        success: false,
+        message: 'Ocurrió un error al enviar la imagen del carnet. Verifique su conexión e intente nuevamente.',
+      };
+    } finally {
+      this.subiendoFoto = false;
     }
   }
  

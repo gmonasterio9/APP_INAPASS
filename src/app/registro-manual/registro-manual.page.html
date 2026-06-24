@@ -1,7 +1,7 @@
 <ion-header>
   <ion-toolbar >
     <ion-buttons slot="start">
-      <ion-button class="icono" fill="clear" (click)="handleBack()">
+      <ion-button class="icono" fill="clear" (click)="handleBack()" [disabled]="procesandoCarnet">
         <ion-icon name="arrow-back"></ion-icon>
       </ion-button>
     </ion-buttons>
@@ -77,6 +77,12 @@
       <hr class="divider">
       <div class="formulario">
       @if (currentStep == 1) {
+        @if (procesandoCarnet) {
+          <div class="progress-horizontal">
+            <div class="progress-text-inline">Validando datos...</div>
+            <ion-progress-bar type="indeterminate" class="custom-progress-bar-inline"></ion-progress-bar>
+          </div>
+        } @else {
         <ion-list>
         <div class="form-field">
         <ion-item lines="full">
@@ -130,41 +136,53 @@
             <ion-icon src="assets/icon/photo_camera.svg"></ion-icon>
             Escanear y copiar información</ion-button>
         </div>
+        }
 
 
     }
     @else if (currentStep == 2) {
-      <ion-list>
-        <ion-item lines="full">
-          <ion-input formControlName="correo" type="email" label="Correo" labelPlacement="stacked" placeholder="Ingrese correo"></ion-input>
-        </ion-item>
-        @if ((submitted || correo?.touched) && correo?.hasError('required')) {
-          <div class="error-message">Campo requerido</div>
-        }
-        @if ((submitted || correo?.touched) && correo?.hasError('email')) {
-          <div class="error-message">Debe ingresar un correo válido</div>
-        }
-      </ion-list>
-    }
+      <div class="paso-correo" [class.paso-correo-bloqueado]="procesandoCarnet">
+        <ion-list>
+          <ion-item lines="full">
+            <ion-input
+              formControlName="correo"
+              type="email"
+              label="Correo"
+              labelPlacement="stacked"
+              placeholder="Ingrese correo"
+              [readonly]="procesandoCarnet"
+            ></ion-input>
+          </ion-item>
+          @if (!procesandoCarnet && (submitted || correo?.touched) && correo?.hasError('required')) {
+            <div class="error-message">Campo requerido</div>
+          }
+          @if (!procesandoCarnet && (submitted || correo?.touched) && correo?.hasError('email')) {
+            <div class="error-message">Debe ingresar un correo válido</div>
+          }
+        </ion-list>
 
-  <div *ngIf="currentStep === 2 && isLoading" class="progress-horizontal">
-    <div class="progress-text-inline">Validando datos...</div>
-    <ion-progress-bar type="indeterminate" class="custom-progress-bar-inline"></ion-progress-bar>
-  </div>
+        @if (procesandoCarnet) {
+          <div class="progress-horizontal">
+            <div class="progress-text-inline">Validando datos...</div>
+            <ion-progress-bar type="indeterminate" class="custom-progress-bar-inline"></ion-progress-bar>
+          </div>
+        }
+      </div>
+    }
 
 </div>
 </div>
   @if (currentStep == 1) {
     <div class="btn-contenedor" [ngClass]="{'fila': true,  'columna': false}">
-          <ion-button class="btn-cancelar btn-large" (click)="volverAtras()">Cancelar</ion-button>
-      <ion-button class="btn-ingresar btn-large" (click)="nextStep()">Siguiente</ion-button>
+          <ion-button class="btn-cancelar btn-large" (click)="cancelarFormulario()" [disabled]="procesandoCarnet">Cancelar</ion-button>
+      <ion-button class="btn-ingresar btn-large" (click)="nextStep()" [disabled]="procesandoCarnet">Siguiente</ion-button>
     </div>
   }
   @else if (currentStep == 2) {
 
     <div class="btn-contenedor" [ngClass]="{'fila': false, 'columna': true }">
-      <ion-button class="btn-cancelar btn-large" (click)="handleBack()">Cancelar</ion-button>
-      <ion-button class="btn-ingresar btn-large" type="submit">Ingresar Asistente</ion-button>
+      <ion-button class="btn-cancelar btn-large" (click)="cancelarFormulario()" [disabled]="procesandoCarnet">Cancelar</ion-button>
+      <ion-button class="btn-ingresar btn-large" type="submit" [disabled]="procesandoCarnet">Ingresar Asistente</ion-button>
     </div>
   }
 </form>

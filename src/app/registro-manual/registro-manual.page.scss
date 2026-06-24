@@ -163,6 +163,24 @@ ion-item {
   margin-right: auto;
 }
 
+.paso-correo {
+  width: 100%;
+}
+
+.paso-correo-bloqueado {
+  ion-item {
+    --background: #f8f9fc;
+  }
+
+  ion-input {
+    pointer-events: none;
+  }
+
+  .progress-horizontal {
+    margin-top: 12px;
+  }
+}
+
 .progress-text-inline {
   font-size: 14px;
   color: #383b53;
