@@ -1,0 +1,81 @@
+.principal {
+  position: absolute;
+  height: 100%;
+  width: 100%;
+}
+
+h6, p {
+  font-family: var(--ion-font-family);
+  font-weight: 400;
+  font-size: 13px;
+  line-height: 100%;
+  letter-spacing: 0%;
+  color: #1565c0;
+}
+
+h6 {
+  color: #41424c;
+}
+
+h2 {
+  font-family: var(--ion-font-family);
+  line-height: 100%;
+  letter-spacing: 0%;
+  font-weight: 700;
+  color: #333333;
+  text-align: left;
+  font-size: 15px;
+}
+
+.centrado-vertical ion-thumbnail {
+  height: 65px;
+  width: 65px;
+  --border-radius: 8px;
+  margin-bottom: 16px;
+  margin-top: 13px;
+}
+
+.centrado-vertical {
+  display: flex;
+  align-items: center;
+  min-height: 100px;  
+  --padding-start: 16px;
+  --padding-end: 16px;
+}
+
+.contenedor.ajustable {
+  min-height: unset !important;
+}
+
+.centrado-vertical ion-label {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; 
+  height: 70px;  
+}
+
+.logout {
+  display: flex;
+  background: var(--Funcional-White, #fefffe);
+  box-shadow: 0px 4px 25px 0px #0000001a;
+  border-radius: 10px;
+  color: var(--Funcional-Danger, #cc0000);
+  width: 95%;
+  height: 57px;
+  margin: 25vh auto 2vh auto;
+  text-align: center;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .contenedor.ajustable {
+    margin-top: 90px !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+  .titulo{
+    margin-top: 12px;
+    margin-bottom: 5px;
+  }
+}

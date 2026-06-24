@@ -1,0 +1,9 @@
+{
+    "/api": {
+        "target": "https://siga.inacap.cl/Inacap.Siga.Inapass",
+        "secure": false,
+        "changeOrigin": true,
+        "timeout": 3600000
+    }
+}
+

@@ -1,0 +1,79 @@
+<ion-header>
+  <ion-toolbar >
+    <ion-buttons slot="start">
+      <ion-button>
+        <ion-icon class="icono"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Registro de Asistencia</ion-title>
+    <ion-buttons slot="end">
+      <ion-button>
+        <ion-icon class="icono"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="principal" [forceOverscroll]="true">
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content
+      pullingText="Desliza para actualizar"
+      refreshingSpinner="crescent"
+      refreshingText="Actualizando..."
+    ></ion-refresher-content>
+  </ion-refresher>
+
+  <div class="contenedor">
+    <div class="titulo">Registrar Asistencia</div>
+    <hr class="divider">
+    <ion-item lines="none" class="centrado-vertical evento-card">
+      <ion-thumbnail slot="start">
+        <img [src]="imagenEvento" alt="Imagen del evento"/>
+      </ion-thumbnail>
+      <ion-label>
+        <ng-container *ngIf="eventoListo; else eventoSkeleton">
+          <h2>{{ evento.Name }}</h2>
+          <p>{{ estado(evento.Event_Start_Date__c, evento.Event_End_Date__c) }}</p>
+          <h6>{{ formatearFecha(evento.Event_Start_Date__c) }}</h6>
+        </ng-container>
+        <ng-template #eventoSkeleton>
+          <ion-skeleton-text class="evento-skeleton evento-skeleton-titulo" [animated]="true"></ion-skeleton-text>
+          <ion-skeleton-text class="evento-skeleton evento-skeleton-estado" [animated]="true"></ion-skeleton-text>
+          <ion-skeleton-text class="evento-skeleton evento-skeleton-fecha" [animated]="true"></ion-skeleton-text>
+        </ng-template>
+      </ion-label>
+    </ion-item>
+    <hr class="divider second">
+    <ng-container *ngIf="contadorAsistentes !== null && contadorAsistentes !== undefined; else contadorSkeleton">
+      <ng-container [ngTemplateOutlet]="asistenciaTemplate" [ngTemplateOutletContext]="{ asistentes: contadorAsistentes }"></ng-container>
+    </ng-container>
+    <ng-template #contadorSkeleton>
+      <ion-skeleton-text class="contador-skeleton" [animated]="true"></ion-skeleton-text>
+    </ng-template>
+
+    <ng-template #asistenciaTemplate let-asistentes="asistentes">
+      <h1 *ngIf="asistentes !== null && asistentes !== undefined">
+        <span
+          [ngClass]="{
+            'text-red': evento?.Maximum_Registration__c != null && asistentes > evento.Maximum_Registration__c
+          }"
+        >
+          {{ asistentes }}
+        </span>
+        / {{ evento?.Maximum_Registration__c ?? 0 }}
+      </h1>
+    </ng-template>
+
+
+    <h5>Registros</h5>
+    <div class="btn-contenedor">
+      <ion-button class="btn-entrada btn-large" (click)="escanearTap()">
+        <ion-icon  slot='start' src="assets/icon/qr_code_scanner.svg"></ion-icon>
+        Escanear
+      </ion-button>
+      <ion-button class="btn-manual btn-large" (click)="ingresoManual()">Ingresar Manualmente</ion-button>
+    </div>
+  </div>
+  <div class="logout" (click)="tapLogout()">Cerrar Sesión</div>
+
+</ion-content>

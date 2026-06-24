@@ -1,0 +1,42 @@
+<!-- <ion-header>
+  <ion-toolbar>
+    <ion-title>Registro de Asistencia</ion-title>
+    <ion-buttons slot="start">
+      <ion-button>
+        <ion-icon class="icono"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-buttons slot="end">
+      <ion-button>
+        <ion-icon class="icono"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="principal" >
+  <div class="contenedor ajustable">
+    <div class="titulo">Eventos programados</div>
+    <hr class="divider">
+    <ion-list>
+      <ion-item 
+        *ngFor="let item of events; let last = last"
+        [lines]="last ? 'none' : 'full'" 
+        (click)="mostrarEvento(item)" 
+        detail="true" 
+        class="ion-activatable centrado-vertical">
+        
+        <ion-thumbnail slot="start">
+          <img />
+        </ion-thumbnail>
+    
+        <ion-label>
+          <h2>{{item.eventName}}</h2>
+          <p>{{estado(item.eventStartDate, item.eventEndtDate)}}</p>
+          <h6>{{item.eventStartDate}}</h6>
+        </ion-label>
+      </ion-item>
+    </ion-list>  
+    </div>
+  <div class="logout" (click)="tapLogout()">Cerrar Sesión</div>
+</ion-content> -->

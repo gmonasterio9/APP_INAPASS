@@ -1,0 +1,55 @@
+
+<ion-content class="principal">
+<div class="wrapper">
+  <section class="contenedor">
+    <section class="logo">
+      <img  src="assets/images/inacap-logo.png">
+    </section>
+    
+    <h1 class="titulo">Registro de Asistencia</h1>
+    <!-- <p class="instruccion">Ingrese su RUN o su cuenta INACAPMail</p> -->
+    <p class="instruccion">Ingrese con su PIN de evento CRM</p>
+
+    <section class="formulario">
+      <form [formGroup]="form" (ngSubmit)="login()">
+        <ion-list>
+          <ion-item lines="none">
+            <ion-grid class="pin-input-grid">
+                <ion-row class="pin-label-row">
+                <ion-col size="1.6"></ion-col> 
+                <ion-col size="8">
+                  <ion-label class="pin-label" >PIN</ion-label>
+                </ion-col>
+              </ion-row>
+              <ion-row class="pin-row">
+                <ion-col size="1.5" class="icon-col">
+                  <ion-icon src="assets/icon/lock.svg" size="large" class="icon"></ion-icon>
+                </ion-col>
+                <ion-col size="1.65" *ngFor="let p of pin; let i = index">
+                  <ion-input
+                    #pinInput
+                    type="password"
+                    maxlength="1"
+                    [formControlName]="'pin' + i"
+                    (ionInput)="onInputChange($event, i)"
+                    (keydown)="onKeyDown($event, i)"
+                    class="pin-input"
+                    inputmode="numeric"
+                    autocomplete="one-time-code"
+                  ></ion-input>
+                </ion-col>
+              </ion-row>
+              
+            </ion-grid>
+          </ion-item>
+        </ion-list>
+        
+        <ion-button type="submit" expand="block">Ingresar</ion-button>
+      </form>
+    </section>
+    <p class="recuperar" >Si no tiene el PIN, comuníquese con el encargado del evento.</p> 
+  </section>
+  <p class="politicas" (click)="politicasTap()">Políticas de privacidad INACAP</p>
+</div>
+</ion-content>
+

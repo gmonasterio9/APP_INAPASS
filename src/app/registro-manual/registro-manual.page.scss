@@ -1,0 +1,232 @@
+.formulario-content {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center; 
+}
+
+.formulario {
+  width: 95%;
+  display: flex;
+  flex-direction: column;
+  align-self: center;
+}
+
+.btn-ingresar {
+  --background: #383b53;
+}
+.btn-cancelar {
+  --background: #6c72a1;
+}
+ion-button.btn-large {
+  width: 100%;
+}
+.camara {
+  width: 30px; 
+  height: 30px; 
+  --background: white;
+  --color: #383b53;
+  --border: 2px;
+  --border-style: solid;
+  --border-color: #6c72a1;
+}
+ion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+ion-item {
+  --padding-start: 0;
+}
+.error-message {
+  color: red;
+  font-size: 12px;
+}
+.field-hint {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #666;
+  margin-top: -12px;
+  padding: 0 4px;
+
+  .char-counter {
+    font-variant-numeric: tabular-nums;
+
+    &.limit-reached {
+      color: #cc0000;
+      font-weight: 600;
+    }
+  }
+}
+.icono-texto {
+  margin-top: 4vh; 
+  margin-bottom: 4vh; 
+
+}
+
+.icono-texto ion-icon {
+  display: flex;
+  width: 24px;
+  height: 24px;
+  margin-right: 10px;
+}
+
+.btn-manual {
+  --background: white;
+  --color: #383b53;
+  border-radius: 50px;
+  border: 2px solid #383B53;
+  margin-top: 5vh;
+  height: 54px;
+  color: #383B53;
+  text-align: center;
+  font-family: var(--ion-font-family);
+  font-size: 16px;
+  text-transform: none;
+}
+.contenedor {
+  margin-top:0;
+  height: auto;
+  min-height: 48vh;
+}
+.contenedor.achicado {
+  min-height: 25vh;
+  margin-bottom: 10px;
+}
+.step-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 23px 0;
+
+  .step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+
+    .circle {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background-color: #828599;
+      color: #FFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-family: var(--ion-font-family);
+      font-weight: 700;
+      text-align: center;
+    }
+
+    &.active .circle {
+      background-color: #1565C0; 
+    }
+  }
+  .line {
+    width: 200px;
+    height: 1px;
+    background-color: #E9E9EB;
+    margin: 0 12px;
+  }
+}
+.btn-contenedor {
+  display: flex;
+  gap: 20px;
+  margin-top: 145px;
+  padding: 10px;
+  justify-content: center;
+  align-items: center;
+}
+
+.btn-contenedor.fila {
+  flex-direction: row;
+}
+
+.btn-contenedor.columna {
+  flex-direction: column-reverse;
+  gap: 40px;
+  margin-top: 20px;
+}
+.progress-horizontal {
+  display: flex;
+  flex-direction: column;
+  align-items: left;
+  gap: 12px;
+  width: 90%;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.progress-text-inline {
+  font-size: 14px;
+  color: #383b53;
+  font-family: var(--ion-font-family);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+ion-progress-bar.custom-progress-bar-inline {
+  --progress-background: linear-gradient(270deg, #717FE8);
+  --background: #e0e7ff;
+  height: 12px;
+  border-radius: 10px;
+  flex-grow: 1;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@media (min-width: 768px) {
+  ion-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-auto-rows: auto;
+    column-gap: 20px;
+    row-gap: 20px;
+    margin-bottom: 40px;
+    margin-top: 10px;
+  }
+
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .form-field:nth-of-type(1) {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .form-field:nth-of-type(2) {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .btn-contenedor {
+    flex-direction: row-reverse;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+  }
+
+  ion-button.btn-large {
+    width: 45%;
+    max-width: 200px;
+  }
+  .titulo{
+    margin-top: 12px;
+    margin-bottom: 5px;
+  }
+  .contenedor {
+    margin-top: 90px !important;
+    height: auto;
+    min-height: 40vh;
+  }
+
+}
+

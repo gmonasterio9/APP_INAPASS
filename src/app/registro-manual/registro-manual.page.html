@@ -1,0 +1,171 @@
+<ion-header>
+  <ion-toolbar >
+    <ion-buttons slot="start">
+      <ion-button class="icono" fill="clear" (click)="handleBack()">
+        <ion-icon name="arrow-back"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Registro de Asistencia</ion-title>
+    <ion-buttons slot="end">
+      <ion-button>
+        <ion-icon class="icono"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<!-- <ion-content class="formulario-content">
+    <div class="contenedor">
+      <div class="titulo">Registrar Asistencia Manualmente</div>
+      <hr class="divider">
+      <div class="formulario">
+        <form [formGroup]="form" (ngSubmit)="registrar()" >
+          <ion-list>
+            <ion-item lines="full">
+              <ion-input formControlName="rut" type="text" label="RUT" labelPlacement="stacked" placeholder="Ingrese rut"></ion-input>
+            </ion-item>
+            <div *ngIf="submitted && rut?.hasError('required')" class="error-message">
+              Campo requerido
+            </div>
+            <ion-item lines="full">
+              <ion-input formControlName="nombre" type="text" label="Nombre Asistente" labelPlacement="stacked" placeholder="Ingrese nombre"></ion-input>
+            </ion-item>
+            <div *ngIf="submitted && nombre?.hasError('required')" class="error-message">
+              Campo requerido
+            </div>
+            <ion-item lines="full">
+              <ion-input formControlName="correo" type="mail" label="Correo" labelPlacement="stacked" placeholder="Ingrese correo"></ion-input>
+            </ion-item>
+            <div *ngIf="submitted && correo?.hasError('required')" class="error-message">
+              Campo requerido
+            </div>
+          </ion-list>
+          <div class="icono-texto"  (click)="fotoCarnet()">
+            <ion-icon class="camara" slot="start" src="assets/icon/photo_camera.svg"></ion-icon>
+            <h6>Escanear y copiar información</h6>
+          </div>
+          <div class="btn-contenedor">
+            <ion-button class="camara btn-ingresar" (click)="fotoCarnet()">
+              <ion-icon  name="camera-outline"></ion-icon>
+            </ion-button>
+            <ion-spinner *ngIf="subiendoFoto" name="dots"></ion-spinner>
+            <ion-button class="btn-ingresar btn-large" type="submit">Ingresar Asistente</ion-button>
+            <ion-button class="btn-cancelar btn-large" (click)="volverAtras()">Cancelar</ion-button>
+          </div>
+        </form>
+      </div>
+  </div>
+</ion-content> -->
+
+
+
+<ion-content class="formulario-content">
+  <div class="step-indicator">
+    <div class="step" [class.active]="currentStep === 1">
+      <div class="circle">1</div>
+    </div>
+    <div class="line"></div>
+    <div class="step" [class.active]="currentStep === 2">
+      <div class="circle">2</div>
+    </div>
+  </div>
+
+
+    <form [formGroup]="form" (ngSubmit)="registrar()">
+      <div class="contenedor" [ngClass]="{'achicado': currentStep === 2}">
+        <div class="titulo">Registrar Asistencia Manualmente</div>
+      <hr class="divider">
+      <div class="formulario">
+      @if (currentStep == 1) {
+        <ion-list>
+        <div class="form-field">
+        <ion-item lines="full">
+          <ion-input
+            formControlName="rut"
+            label="RUT"
+            labelPlacement="stacked"
+            placeholder="12.345.678-9"
+            (ionInput)="onRutInput($event)"
+          ></ion-input>
+        </ion-item>
+        @if ((submitted || rut?.touched) && rut?.hasError('required')) {
+          <div class="error-message">El RUT es requerido</div>
+        }
+        @if ((submitted || rut?.touched) && rut?.hasError('rutInvalido')) {
+          <div class="error-message">RUT inválido</div>
+        }
+        </div>
+        <div class="form-field">
+        <ion-item lines="full">
+          <ion-input
+            formControlName="nombre"
+            type="text"
+            label="Nombre Asistente"
+            labelPlacement="stacked"
+            placeholder="Nombre y apellido"
+            [maxlength]="nombreMaxLength"
+          ></ion-input>
+        </ion-item>
+        <div class="field-hint">
+          <span class="char-counter" [class.limit-reached]="nombreLongitud >= nombreMaxLength">
+            {{ nombreLongitud }}/{{ nombreMaxLength }}
+          </span>
+        </div>
+        @if ((submitted || nombre?.touched) && nombre?.hasError('required')) {
+          <div class="error-message">El nombre es requerido</div>
+        }
+        @if ((submitted || nombre?.touched) && nombre?.hasError('nombreIncompleto')) {
+          <div class="error-message">Ingrese nombre y apellido</div>
+        }
+        @if ((submitted || nombre?.touched) && nombre?.hasError('maxlength')) {
+          <div class="error-message">Máximo {{ nombreMaxLength }} caracteres</div>
+        }
+        @if ((submitted || nombre?.touched) && nombre?.hasError('nombreSoloLetras')) {
+          <div class="error-message">Solo se permiten letras</div>
+        }
+        </div>
+      </ion-list>
+        <div class="icono-texto">
+          <ion-button class="btn-manual btn-large" (click)="fotoCarnet()">
+            <ion-icon src="assets/icon/photo_camera.svg"></ion-icon>
+            Escanear y copiar información</ion-button>
+        </div>
+
+
+    }
+    @else if (currentStep == 2) {
+      <ion-list>
+        <ion-item lines="full">
+          <ion-input formControlName="correo" type="email" label="Correo" labelPlacement="stacked" placeholder="Ingrese correo"></ion-input>
+        </ion-item>
+        @if ((submitted || correo?.touched) && correo?.hasError('required')) {
+          <div class="error-message">Campo requerido</div>
+        }
+        @if ((submitted || correo?.touched) && correo?.hasError('email')) {
+          <div class="error-message">Debe ingresar un correo válido</div>
+        }
+      </ion-list>
+    }
+
+  <div *ngIf="currentStep === 2 && isLoading" class="progress-horizontal">
+    <div class="progress-text-inline">Validando datos...</div>
+    <ion-progress-bar type="indeterminate" class="custom-progress-bar-inline"></ion-progress-bar>
+  </div>
+
+</div>
+</div>
+  @if (currentStep == 1) {
+    <div class="btn-contenedor" [ngClass]="{'fila': true,  'columna': false}">
+          <ion-button class="btn-cancelar btn-large" (click)="volverAtras()">Cancelar</ion-button>
+      <ion-button class="btn-ingresar btn-large" (click)="nextStep()">Siguiente</ion-button>
+    </div>
+  }
+  @else if (currentStep == 2) {
+
+    <div class="btn-contenedor" [ngClass]="{'fila': false, 'columna': true }">
+      <ion-button class="btn-cancelar btn-large" (click)="handleBack()">Cancelar</ion-button>
+      <ion-button class="btn-ingresar btn-large" type="submit">Ingresar Asistente</ion-button>
+    </div>
+  }
+</form>
+</ion-content>

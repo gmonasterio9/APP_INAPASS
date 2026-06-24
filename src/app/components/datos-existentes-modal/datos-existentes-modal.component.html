@@ -1,0 +1,61 @@
+<ion-header>
+  <ion-toolbar >
+    <ion-buttons slot="start">
+      <ion-back-button class="icono" text
+      >Volver</ion-back-button>
+    </ion-buttons>
+    <ion-title>Registro de Asistencia</ion-title>
+    <ion-buttons slot="end">
+      <ion-button>
+        <ion-icon class="icono"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="formulario-content"[fullscreen]="true">
+
+    <div class="informacion">
+      <div class="info-header">
+        <div class="icon-container">  
+        <ion-icon class="icon" src="assets/icon/info.svg"></ion-icon>
+        </div>
+        <h2>Datos ya existentes</h2>
+      </div>
+      <p>El asistente ya ha participado de otros eventos con los siguientes datos:</p>
+    </div>
+  
+    <div class="contenedor-form">
+      <div class="titulo">Registrar Asistencia Manualmente</div>
+      <hr class="divider">
+      <div class="formulario">
+        <form [formGroup]="form" (ngSubmit)="registrar()" >
+          <ion-list>
+            <ion-item lines="full">
+              <ion-input #rutInput formControlName="rut" type="text" label="Rut" labelPlacement="stacked" placeholder="Ingrese rut"[readonly]="true"></ion-input>
+            </ion-item>
+
+            <ion-item lines="full">
+              <ion-input #nombreInput formControlName="nombre" type="text" label="Nombre Asistente" labelPlacement="stacked" placeholder="Ingrese nombre" [readonly]="true"></ion-input>
+            </ion-item>
+           
+            <ion-item lines="full">
+              <ion-input #correoInput formControlName="correo" type="mail" label="Correo" labelPlacement="stacked" placeholder="Ingrese correo"></ion-input>
+              <ion-icon class="edit" src="assets/icon/edit.svg" slot="end" (click)="enfocarCampo(correoInput)"></ion-icon>            
+            </ion-item>
+            <div *ngIf="submitted && correoControl?.hasError('required')" class="error-message">
+              Campo requerido
+            </div>     
+            
+          </ion-list>
+          <div class="btn-contenedor">
+            <ion-button class="btn-ingresar btn-large" type="submit">Ingresar Asistente</ion-button>
+            <ion-button class="btn-cancelar btn-large" (click)="closeModal()">Cancelar</ion-button>
+          </div>
+        </form> 
+      </div>
+  </div>
+</ion-content>
+
+
+

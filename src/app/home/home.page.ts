@@ -1,0 +1,139 @@
+import { Component, QueryList, ViewChildren } from '@angular/core';
+import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { EventosService } from '../services/eventos.service';
+import { NavController } from '@ionic/angular';
+import { DialogService } from '../services/dialog.service';
+import { UtilsService } from '../services/utils.service';
+import { AuthService } from '../services/auth.service';
+import { RegistroAsistenciaService } from '../services/registro-asistencia.service';
+import { IonInput } from '@ionic/angular';
+
+@Component({
+  selector: 'app-home',
+  templateUrl: 'home.page.html',
+  styleUrls: ['home.page.scss'],
+  standalone:false
+})
+export class HomePage {
+  form!: FormGroup;
+  pin: string[] = ['', '', '', '', '', ''];
+
+  @ViewChildren('pinInput') pinInputs!: QueryList<IonInput>;
+
+  constructor(
+    private fb: FormBuilder,
+    private eventos: EventosService,
+    private nav: NavController,
+    private utils: UtilsService,
+    private dialog: DialogService,
+    private route: ActivatedRoute,
+    private auth: AuthService,
+    private asistencia: RegistroAsistenciaService,
+  ) {
+    this.form = this.fb.group({});
+    for (let i = 0; i < 6; i++) {
+      this.form.addControl(`pin${i}`, new FormControl(''));
+    }
+  
+    this.form.addControl('Pin', new FormControl('', Validators.required));
+  }
+  
+
+  ngOnInit() {
+    this.route.queryParams.subscribe(params => {
+      if (params['logout']) {
+        this.resetForm();
+      }
+    });
+  }
+
+  ngAfterViewInit() {
+    this.focusInput(0);
+  }
+
+  onInputChange(event: any, index: number) {
+    const value = event.detail.value || '';
+  
+    if (value.length > 0 && index < this.pin.length - 1) {
+      this.focusInput(index + 1);
+    }
+  
+    this.updatePinControl();
+  }
+  
+
+  onKeyDown(event: KeyboardEvent, index: number) {
+    const input = event.target as HTMLInputElement;
+    if (event.key === 'Backspace' && !input.value && index > 0) {
+      this.focusInput(index - 1);
+    }
+  }
+
+  focusInput(index: number) {
+    const inputs = this.pinInputs.toArray();
+    if (inputs[index]) {
+      setTimeout(() => inputs[index].setFocus(), 10);
+    }
+  }
+
+  updatePinControl() {
+    const pinValue = Array.from({ length: 6 }, (_, i) => this.form.get(`pin${i}`)?.value || '').join('');
+    this.form.get('Pin')?.setValue(pinValue);
+  }
+  
+  async login() {
+    this.updatePinControl(); 
+    if (this.form.valid) {
+      const loading = await this.dialog.showLoading({ message: 'Ingresando...' });
+
+      try {
+        const response = await this.eventos.loginValidation({ Pin: this.form.get('Pin')?.value });
+        const message = response.message;
+
+        if (response.success) {
+          const auth = {
+            token: response.data.access_token,
+            expires: response.data.expires,
+          };
+
+          await this.auth.setAuth(auth);
+          this.asistencia.establecerEventoActivo(response.data.evento.records[0]);
+          this.nav.navigateForward(['/registrar-asistencia'], { state: response.data.evento.records[0] });
+        } else {
+          this.resetForm();
+
+          await this.dialog.showAlert({
+            header: 'Error al ingresar',
+            message,
+            buttons: [{ text: 'Aceptar', role: 'ok' }],
+          });
+        }
+      } catch (error) {
+        this.resetForm();
+
+        await this.dialog.showAlert({
+          header: 'Error',
+          message: 'Ocurrió un error inesperado. Por favor intenta nuevamente.',
+          buttons: [{ text: 'Aceptar', role: 'ok' }],
+        });
+      } finally {
+        await this.dialog.dismissLoading();
+      }
+    }
+  }
+
+  resetForm() {
+    this.form.reset();
+    this.pin = ['', '', '', '', '', ''];
+    this.focusInput(0);
+  }
+
+  get Pin() {
+    return this.form.get('Pin');
+  }
+
+  async politicasTap() {
+    this.utils.openLink('https://portales.inacap.cl/politicas-de-privacidad');
+  }
+}

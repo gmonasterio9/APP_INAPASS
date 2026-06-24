@@ -1,0 +1,198 @@
+.principal {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+ion-item {
+  align-self: center;
+  width: 95%;
+}
+
+ion-thumbnail {
+  width: 75px;
+  height: 75px;
+  top: 191.5px;
+  left: 19.5px;
+  border-radius: 8px;
+  img{
+    border-radius: 8px;
+  }
+}
+ion-label {
+  width: 231px;
+  height: 76px;
+  top: 191px;
+  left: 109px;
+  gap: 5px;
+}
+h1, h2, h5, h6, p {
+  font-family: var(--ion-font-family);
+  line-height: 100%;
+  letter-spacing: 0%;
+}
+
+h6, p {
+  font-weight: 400;
+  font-size: 13px;
+  color: #1565c0;
+}
+
+h6 {
+  color: #41424c;
+}
+
+h1, h5, h2 {
+  font-weight: 700;
+  text-align: center;
+  color: #333333;
+}
+
+h2 {
+  text-align: left;
+  font-size: 15px;
+}
+h1 {
+  font-size: 32px;
+}
+h5 {
+  font-weight: 400;
+  font-size: 16px;
+}
+.centrado-vertical ion-label {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; 
+  height: 65px;  
+}
+
+.evento-skeleton {
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.evento-skeleton-titulo {
+  width: 85%;
+  height: 15px;
+}
+
+.evento-skeleton-estado {
+  width: 55%;
+  height: 13px;
+}
+
+.evento-skeleton-fecha {
+  width: 65%;
+  height: 13px;
+  margin-bottom: 0;
+}
+
+.contador-skeleton {
+  display: block;
+  width: 120px;
+  height: 32px;
+  margin: 0 auto;
+  border-radius: 6px;
+}
+
+.btn-entrada {
+  --background: #383b53;
+}
+
+.btn-manual {
+  --background: white;
+  --color: #383b53;
+  --border: 2px;
+  --border-style: solid;
+  --border-color: #6c72a1;
+}
+.text-red {
+  color: rgb(213, 42, 42);
+  font-weight: bold;
+}
+.logout {
+  display: flex;
+  background: var(--Funcional-White, #fefffe);
+  box-shadow: 0px 4px 25px 0px #0000001a;
+  border-radius: 10px;
+  color: var(--Funcional-Danger, #cc0000);
+  width: 95%;
+  height: 57px;
+  margin: 0 auto 2vh auto;
+  text-align: center;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (min-width: 768px) {
+  ion-thumbnail {
+    width: 360px;  
+    height: 270px;  
+    --border-radius: 8px; 
+    // margin-top: 20px;
+    // margin-bottom: 40px;
+    // margin-left: 10px;
+    // padding: 0px;
+    img{
+    border-radius: 8px; 
+    margin-bottom: 0px;
+    padding: 0px;
+    }
+  }
+  h1 {
+    margin-top: 50px;
+    font-size: 42px; 
+    font-weight: 700;
+  } 
+  h5{
+    margin-top: 0px;
+    font-size: 18px;
+  }
+  .btn-contenedor {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 40px; 
+    padding-left: 32px;  
+    padding-right: 32px; 
+    margin-top: 0; 
+  }
+  .btn-contenedor ion-button {
+    flex: 1; 
+    max-width: 345px; 
+  }
+ 
+  .contenedor {
+    height: 53%;
+    min-height: 450px;
+    margin-top: 90px !important;
+  }  
+  .contenedor h5 {
+    margin-bottom: 40px;
+  }
+  .titulo{
+    margin-top: 12px;
+    margin-bottom: 5px;
+  }
+  .btn-entrada {
+    order: 2; 
+  }
+
+  .btn-manual {
+    order: 1; 
+  }
+  .centrado-vertical {
+    display: flex;
+    align-items: start;
+  }
+  h2 {
+    text-align: left;
+    font-size: 18px;
+    color: #333;
+    margin-top: 11px;
+
+  }
+  p,h6{
+    font-size: 16px;
+  }
+  
+}

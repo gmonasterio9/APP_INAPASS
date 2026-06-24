@@ -1,0 +1,7 @@
+{
+  "name": "ina-pass",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}
