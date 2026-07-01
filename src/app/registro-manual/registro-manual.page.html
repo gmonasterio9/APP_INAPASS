@@ -132,7 +132,7 @@
         </div>
       </ion-list>
         <div class="icono-texto">
-          <ion-button class="btn-manual btn-large" (click)="fotoCarnet()">
+          <ion-button class="btn-manual btn-large" (click)="fotoCarnet()" [disabled]="procesandoCarnet">
             <ion-icon src="assets/icon/photo_camera.svg"></ion-icon>
             Escanear y copiar información</ion-button>
         </div>

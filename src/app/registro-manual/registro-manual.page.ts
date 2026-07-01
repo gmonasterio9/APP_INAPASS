@@ -19,6 +19,7 @@ export class RegistroManualPage implements OnInit, ViewWillLeave {
 
   readonly nombreMaxLength: number;
   subiendoFoto = false;
+  abriendoCamara = false;
   submitted = false;
   form!: FormGroup;
   state: any;
@@ -81,7 +82,7 @@ export class RegistroManualPage implements OnInit, ViewWillLeave {
   }
 
   get procesandoCarnet(): boolean {
-    return this.isLoading || this.subiendoFoto;
+    return this.isLoading || this.subiendoFoto || this.abriendoCamara;
   }
 
   get nombreLongitud(): number {
@@ -358,7 +359,9 @@ export class RegistroManualPage implements OnInit, ViewWillLeave {
         return;
       }
 
+      this.abriendoCamara = true;
       const image = await Camera.getPhoto(this.utils.obtenerOpcionesFotoCarnet());
+      this.abriendoCamara = false;
       if (!image?.base64String) {
         await this.mostrarErrorCarnet('No se pudo capturar la imagen. Intente nuevamente.');
         return;
@@ -404,6 +407,7 @@ export class RegistroManualPage implements OnInit, ViewWillLeave {
       this.currentStep = 1;
       await this.mostrarErrorCarnet('Ocurrió un error al procesar el carnet. Intente nuevamente.');
     } finally {
+      this.abriendoCamara = false;
       this.isLoading = false;
       this.subiendoFoto = false;
     }

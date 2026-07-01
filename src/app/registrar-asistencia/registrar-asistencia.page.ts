@@ -27,6 +27,7 @@ export class RegistrarAsistenciaPage implements OnDestroy, ViewWillEnter, ViewWi
   private refreshSub?: Subscription;
   private backButtonSub?: Subscription;
   intervalId?: ReturnType<typeof setInterval>;
+  escaneandoQR = false;
 
   constructor(private router: Router,
     private pt: Platform,
@@ -263,12 +264,17 @@ export class RegistrarAsistenciaPage implements OnDestroy, ViewWillEnter, ViewWi
   }
 
   async escanearTap() {
+    if (this.escaneandoQR) {
+      return;
+    }
+
     const tienePermiso = await this.utils.tienePermisoCamara();
     if (!tienePermiso) {
       await this.utils.showAlertCamera();
       return;
     }
 
+    this.escaneandoQR = true;
     try {
       const barcode = await this.utils.escanearCodigoQR();
       if (!barcode) {
@@ -322,6 +328,7 @@ export class RegistrarAsistenciaPage implements OnDestroy, ViewWillEnter, ViewWi
     }catch(error){
       console.error('Error en el proceso de escaneo:', error);
     }finally{
+      this.escaneandoQR = false;
       await this.dialog.dismissLoading();
     }
   }

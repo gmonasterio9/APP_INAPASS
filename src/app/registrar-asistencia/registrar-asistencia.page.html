@@ -67,11 +67,11 @@
 
     <h5>Registros</h5>
     <div class="btn-contenedor">
-      <ion-button class="btn-entrada btn-large" (click)="escanearTap()">
+      <ion-button class="btn-entrada btn-large" (click)="escanearTap()" [disabled]="escaneandoQR">
         <ion-icon  slot='start' src="assets/icon/qr_code_scanner.svg"></ion-icon>
         Escanear
       </ion-button>
-      <ion-button class="btn-manual btn-large" (click)="ingresoManual()">Ingresar Manualmente</ion-button>
+      <ion-button class="btn-manual btn-large" (click)="ingresoManual()" [disabled]="escaneandoQR">Ingresar Manualmente</ion-button>
     </div>
   </div>
   <div class="logout" (click)="tapLogout()">Cerrar Sesión</div>
