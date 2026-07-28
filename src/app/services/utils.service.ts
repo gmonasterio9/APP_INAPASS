@@ -3,7 +3,8 @@ import { DialogService } from 'src/app/services/dialog.service';
 import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
 import { Camera, CameraPermissionType, CameraResultType, CameraSource, ImageOptions } from '@capacitor/camera';
-import { CapacitorBarcodeScanner, CapacitorBarcodeScannerTypeHint } from '@capacitor/barcode-scanner';
+import { CapacitorBarcodeScanner, CapacitorBarcodeScannerCameraDirection, CapacitorBarcodeScannerTypeHint } from '@capacitor/barcode-scanner';
+import { Html5Qrcode } from 'html5-qrcode';
 import { BehaviorSubject } from 'rxjs';
 
 
@@ -59,48 +60,159 @@ export class UtilsService {
 
   private intentosEstiloScanner = 0;
   private uiScannerWebActiva = false;
+  private scannerWeb?: Html5Qrcode;
 
   async escanearCodigoQR(): Promise<string | undefined> {
     if (this.esWeb()) {
-      await this.prepararScannerWeb();
+      return this.escanearCodigoQRWeb();
     }
 
     try {
-      const scanPromise = CapacitorBarcodeScanner.scanBarcode({
+      const result = await CapacitorBarcodeScanner.scanBarcode({
         hint: CapacitorBarcodeScannerTypeHint.QR_CODE,
-        web: { scannerFPS: 15 },
+        cameraDirection: CapacitorBarcodeScannerCameraDirection.BACK,
       });
-
-      if (this.esWeb()) {
-        this.activarDisenoScannerWeb();
-      }
-
-      const result = await scanPromise;
       return result?.ScanResult || undefined;
     } catch (error) {
       console.error('Error al escanear código QR', error);
       return undefined;
-    } finally {
-      if (this.esWeb()) {
-        await this.finalizarScannerWeb();
-      }
     }
   }
 
-  private async prepararScannerWeb(): Promise<void> {
+  private escanearCodigoQRWeb(): Promise<string | undefined> {
+    return new Promise((resolve) => {
+      void this.iniciarScannerWeb(resolve);
+    });
+  }
+
+  private async iniciarScannerWeb(resolve: (value: string | undefined) => void): Promise<void> {
+    await this.detenerScannerWebActivo();
+    this.construirScannerWeb();
+    this.mostrarScannerWeb();
+
+    const elementId = 'cap-os-barcode-scanner-container-scanner';
+    const scannerEl = document.getElementById(elementId);
+    if (!scannerEl) {
+      resolve(undefined);
+      return;
+    }
+
+    scannerEl.replaceChildren();
+    this.scannerWeb = new Html5Qrcode(elementId, { verbose: false });
+
+    let finalizado = false;
+    const cerrar = async (resultado?: string) => {
+      if (finalizado) {
+        return;
+      }
+      finalizado = true;
+      await this.finalizarScannerWeb();
+      resolve(resultado);
+    };
+
+    const closeButton = document.getElementById('cap-os-barcode-scanner-close-button');
+    if (closeButton) {
+      closeButton.onclick = () => void cerrar(undefined);
+    }
+
+    const qrSize = Math.min(300, Math.max(220, Math.floor(window.innerWidth * 0.72)));
+    const config = {
+      fps: 15,
+      qrbox: { width: qrSize, height: qrSize },
+      aspectRatio: 1.0,
+    };
+
+    const onSuccess = (decodedText: string) => void cerrar(decodedText);
+    const onError = () => { /* sin código en este frame */ };
+
+    const camaras = [{ facingMode: 'environment' }, { facingMode: 'user' }] as const;
+
+    for (const camara of camaras) {
+      try {
+        await this.scannerWeb.start(camara, config, onSuccess, onError);
+        return;
+      } catch (error) {
+        console.warn('No se pudo iniciar cámara', camara, error);
+      }
+    }
+
+    await cerrar(undefined);
+  }
+
+  private construirScannerWeb(): void {
+    let container = document.getElementById('cap-os-barcode-scanner-container');
+    if (container) {
+      container.className = 'inapass-scanner scanner-container-display';
+      const dialog = document.getElementById('cap-os-barcode-scanner-container-dialog');
+      if (dialog) {
+        dialog.style.display = 'flex';
+      }
+      return;
+    }
+
+    container = document.body.appendChild(document.createElement('div'));
+    container.id = 'cap-os-barcode-scanner-container';
+    container.className = 'inapass-scanner scanner-container-display';
+
+    const dialog = document.createElement('div');
+    dialog.id = 'cap-os-barcode-scanner-container-dialog';
+    dialog.className = 'scanner-dialog';
+
+    const inner = document.createElement('div');
+    inner.className = 'scanner-dialog-inner inapass-scanner-camera';
+
+    const closeButton = document.createElement('span');
+    closeButton.id = 'cap-os-barcode-scanner-close-button';
+    closeButton.className = 'close-button';
+    closeButton.innerHTML = '&times;';
+    inner.appendChild(closeButton);
+
+    const scannerHost = document.createElement('div');
+    scannerHost.className = 'scanner-container-full-width';
+    scannerHost.id = 'cap-os-barcode-scanner-container-scanner';
+    inner.appendChild(scannerHost);
+
+    dialog.appendChild(inner);
+    container.appendChild(dialog);
+  }
+
+  private mostrarScannerWeb(): void {
+    const dialog = document.getElementById('cap-os-barcode-scanner-container-dialog');
+    if (dialog) {
+      dialog.style.display = 'flex';
+    }
     this.intentosEstiloScanner = 0;
     this.uiScannerWebActiva = false;
-    await this.detenerScannerWebActivo();
-    document.getElementById('cap-os-barcode-scanner-container-scanner')?.replaceChildren();
-    this.removerUiScannerWeb();
-    document.getElementById('cap-os-barcode-scanner-container')?.classList.add('inapass-scanner');
+    this.activarDisenoScannerWeb();
+  }
+
+  private async detenerScannerWebActivo(): Promise<void> {
+    if (this.scannerWeb) {
+      try {
+        if (this.scannerWeb.isScanning) {
+          await this.scannerWeb.stop();
+        }
+        await this.scannerWeb.clear();
+      } catch {
+        // El scanner a veces falla al limpiar nodos ya removidos.
+      }
+      this.scannerWeb = undefined;
+    }
+
+    const legacyScanner = (window as Window & { OSBarcodeWebScanner?: { stop: () => Promise<void> } }).OSBarcodeWebScanner;
+    if (legacyScanner) {
+      try {
+        await legacyScanner.stop();
+      } catch {
+        // ignore
+      }
+      (window as Window & { OSBarcodeWebScanner?: { stop: () => Promise<void> } }).OSBarcodeWebScanner = undefined;
+    }
   }
 
   private activarDisenoScannerWeb(): void {
     const dialog = document.getElementById('cap-os-barcode-scanner-container-dialog');
-    const visible = dialog && dialog.style.display !== 'none';
-
-    if (!visible) {
+    if (!dialog) {
       if (++this.intentosEstiloScanner <= 30) {
         requestAnimationFrame(() => this.activarDisenoScannerWeb());
       }
@@ -128,21 +240,6 @@ export class UtilsService {
     }
   }
 
-  private async detenerScannerWebActivo(): Promise<void> {
-    const scanner = (window as Window & { OSBarcodeWebScanner?: { stop: () => Promise<void> } }).OSBarcodeWebScanner;
-    if (!scanner) {
-      return;
-    }
-
-    try {
-      await scanner.stop();
-    } catch {
-      // El plugin a veces falla al limpiar nodos ya removidos.
-    }
-
-    (window as Window & { OSBarcodeWebScanner?: { stop: () => Promise<void> } }).OSBarcodeWebScanner = undefined;
-  }
-
   private async finalizarScannerWeb(): Promise<void> {
     await this.detenerScannerWebActivo();
     document.getElementById('cap-os-barcode-scanner-container-scanner')?.replaceChildren();
@@ -155,7 +252,7 @@ export class UtilsService {
 
     this.removerUiScannerWeb();
     document.querySelector('.scanner-dialog-inner')?.classList.remove('inapass-scanner-camera');
-    document.getElementById('cap-os-barcode-scanner-container')?.classList.remove('inapass-scanner');
+    document.getElementById('cap-os-barcode-scanner-container')?.classList.remove('inapass-scanner', 'scanner-container-display');
     this.uiScannerWebActiva = false;
     this.intentosEstiloScanner = 0;
   }
@@ -163,7 +260,7 @@ export class UtilsService {
   private removerUiScannerWeb(): void {
     document.querySelector('.inapass-scanner-ui')?.remove();
   }
-  
+
   async showAlertCamera(header: string = 'Escanear Código QR') {
     if (this.esWeb()) {
       return this.dialog.showAlert({
@@ -175,10 +272,10 @@ export class UtilsService {
 
     const alert = await this.dialog.showAlert({
       header: header,
-      message: 'Permitir que Ina-pass acceda a la cámara del dispositivo.',
+      message: 'Permitir que Inapass acceda a la cámara del dispositivo.',
       buttons: [
         {
-          text: '"Abrir" Configuración',
+          text: 'Abrir Configuración',
           role: 'destructive',
         },
         {
@@ -272,14 +369,76 @@ export class UtilsService {
     return /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/.test(trimmed);
   }
 
- 
+  esQrColaborador(texto: string): boolean {
+    const value = `${texto ?? ''}`;
+    if (/BEGIN:VCARD/i.test(value)) {
+      return true;
+    }
+    return /Nombre\s*:/i.test(value) && /Correo electr[oó]nico\s*:/i.test(value);
+  }
+
+  parsearQrColaborador(texto: string): {
+    nombre: string;
+    correo: string;
+    telefono: string;
+    empresa: string;
+    titulo: string;
+  } {
+    const value = `${texto ?? ''}`.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+    if (/BEGIN:VCARD/i.test(value)) {
+      const extraerVcard = (campo: string): string => {
+        const regex = new RegExp(`^${campo}(?:;[^:]*)?:(.+)$`, 'im');
+        const match = value.match(regex);
+        return match?.[1]?.trim() ?? '';
+      };
+
+      const fn = extraerVcard('FN');
+      const n = extraerVcard('N');
+      let nombre = fn;
+      if (!nombre && n) {
+        // N:Apellidos;Nombre;...
+        const partes = n.split(';');
+        const apellidos = partes[0]?.trim() ?? '';
+        const nombres = partes[1]?.trim() ?? '';
+        nombre = `${nombres} ${apellidos}`.trim();
+      }
+
+      return {
+        nombre,
+        correo: extraerVcard('EMAIL').toLowerCase(),
+        telefono: extraerVcard('TEL'),
+        empresa: extraerVcard('ORG'),
+        titulo: extraerVcard('TITLE'),
+      };
+    }
+
+    const extraer = (label: string): string => {
+      const regex = new RegExp(`${label}\\s*:\\s*(.+)`, 'i');
+      const match = value.match(regex);
+      return match?.[1]?.trim() ?? '';
+    };
+
+    const correoRaw = extraer('Correo electr[oó]nico');
+    const telefonoRaw = extraer('N[uú]mero');
+
+    return {
+      nombre: extraer('Nombre'),
+      correo: correoRaw.replace(/\s*\([^)]*\)\s*/g, '').trim().toLowerCase(),
+      telefono: telefonoRaw.replace(/\s*\([^)]*\)\s*/g, '').trim(),
+      empresa: extraer('Empresa'),
+      titulo: extraer('T[ií]tulo'),
+    };
+  }
+
+
   resolverEstado(inicio: Date , fin: Date) {
     const now = new Date();
- 
+
     if (!inicio || !fin) {
       return 'Fechas no disponibles';
     }
-  
+
     if (now > inicio && now > fin) {
       return 'Evento Terminado';
     } else if (now < inicio && now < fin) {
@@ -295,7 +454,7 @@ export class UtilsService {
     const asistentes$ = this.getAsistentes(eventId);
     asistentes$.next(valor);
   }
-  
+
   getAsistentes(eventId: string): BehaviorSubject<number> {
     if (!this.asistentesMap.has(eventId)) {
       this.asistentesMap.set(eventId, new BehaviorSubject(0));
@@ -308,7 +467,7 @@ export class UtilsService {
     const actual = Number(asistentes$.value);
     asistentes$.next(actual + 1);
   }
-  
+
   divideBase64(base64: string, maxSize: number = 3 * 1024 * 1024): string[] {
     const chunkSize = Math.floor(maxSize * 4 / 3);
     const base64Data = base64.includes(",") ? base64.split(",")[1] : base64;
@@ -321,65 +480,99 @@ export class UtilsService {
     return fragments;
   }
 
- 
+
 
   buscarEnArray(buscar: string, campo: string, array: any[]): [boolean, string, boolean] {
     let encontrado = false;
     let registroId = '';
     let attendee = false;
- 
-    if(campo === 'qr'){
-      for (const persona of array) {
-        const decodedHtml = persona[campo].replace(/&amp;/g, '&');
-        const url = decodedHtml.match(/src="([^"]+)"/)[1];
-        const params = new URLSearchParams(url.split('?')[1]);
-        const chl = params.get('chl');
 
-      
-        if(buscar === chl){
-          encontrado = true;
-          registroId = persona.eventRegistrationId;
-          if(persona["invitationStatus"] === "Asistió a evento"){
-            attendee = true;
+    if(campo === 'qr'){
+      const buscarNormalizado = buscar.trim();
+      for (const persona of array) {
+        const qrValue = persona?.[campo];
+        if (!qrValue) {
+          continue;
+        }
+
+        try {
+          const qrTexto = `${qrValue}`.replace(/&amp;/g, '&').trim();
+          if (qrTexto === buscarNormalizado) {
+            encontrado = true;
+            registroId = persona.eventRegistrationId;
+            if (persona['invitationStatus'] === 'Asistió a evento') {
+              attendee = true;
+            }
+            break;
           }
-          break; 
+
+          const match = qrTexto.match(/src="([^"]+)"/);
+          if (!match?.[1]) {
+            continue;
+          }
+
+          const params = new URLSearchParams(match[1].split('?')[1] ?? '');
+          const chl = params.get('chl');
+
+          if (buscarNormalizado === chl) {
+            encontrado = true;
+            registroId = persona.eventRegistrationId;
+            if (persona['invitationStatus'] === 'Asistió a evento') {
+              attendee = true;
+            }
+            break;
+          }
+        } catch {
+          continue;
         }
       }
     }
-    
+
     else{
-      const buscarNormalizado = buscar.toLocaleLowerCase().trim().replace(/\./g, '');
+      const esEmail = campo === 'email' || campo === 'emailEvento';
+      const buscarNormalizado = esEmail
+        ? buscar.toLocaleLowerCase().trim()
+        : buscar.toLocaleLowerCase().trim().replace(/\./g, '');
+
       for (const persona of array) {
-        const campoNormalizado = persona[campo].toLocaleLowerCase().trim().replace(/\./g, '');
+        const valorCampo = persona?.[campo];
+        if (valorCampo == null || valorCampo === '') {
+          continue;
+        }
+
+        const campoNormalizado = esEmail
+          ? `${valorCampo}`.toLocaleLowerCase().trim()
+          : `${valorCampo}`.toLocaleLowerCase().trim().replace(/\./g, '');
+
         if (campoNormalizado === buscarNormalizado) {
           encontrado = true;
           registroId = persona.eventRegistrationId;
           if(persona["invitationStatus"] === "Asistió a evento"){
             attendee = true;
           }
-          break; 
+          break;
         }
       }
     }
-  
+
     return [encontrado, registroId, attendee];
   }
   separarNombre(nombreCompleto: string): [string, string] {
     const partes = nombreCompleto.trim().split(/\s+/);
     const total = partes.length;
-  
+
     if (total === 0) {
       return ['', ''];
     }
-  
+
     if (total === 1) {
       return [partes[0], ''];
     }
-  
+
     if (total === 2) {
       return [partes[0], partes[1]];
     }
-  
+
     const apellidos = partes.slice(-2).join(' ');
     const nombres = partes.slice(0, -2).join(' ');
     return [nombres, apellidos];

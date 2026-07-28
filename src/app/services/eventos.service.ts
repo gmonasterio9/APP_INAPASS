@@ -164,7 +164,7 @@ export class EventosService {
     return this.post(`${this.baseUrl}/cargar-foto-cedula`, params);
   }
   getCredencial(token: string){
-    return this.get(`${this.baseUrl}/info-credencial?token=${token}`)
+    return this.get(`${this.baseUrl}/info-credencial?token=${encodeURIComponent(token)}`)
   }
   actualizarContacto(idContacto: string, params: any){
     return this.patch(`${this.baseUrl}/contacto/${idContacto}`, params);

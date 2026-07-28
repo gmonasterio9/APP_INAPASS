@@ -97,6 +97,12 @@ export class RegistroManualPage implements OnInit, ViewWillLeave {
     if(this.state?.rut){
       this.rut?.setValue(this.utils.formatearRut(this.state.rut));
     }
+    if (this.state?.nombre) {
+      this.nombre?.setValue(this.utils.sanitizarNombre(`${this.state.nombre}`, this.nombreMaxLength));
+    }
+    if (this.state?.correo) {
+      this.correo?.setValue(`${this.state.correo}`.trim().toLowerCase());
+    }
   }
 
   onRutInput(event: Event): void {

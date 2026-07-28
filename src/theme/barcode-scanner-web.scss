@@ -83,15 +83,19 @@
     display: none !important;
   }
 
-  canvas,
+  canvas {
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
   img {
     display: none !important;
   }
 
   #qr-shaded-region {
-    border: none !important;
-    box-shadow: none !important;
-    opacity: 0 !important;
+    border-color: rgba(255, 255, 255, 0.35) !important;
+    box-shadow: rgba(0, 0, 0, 0.45) 0 0 0 5000px !important;
+    opacity: 1 !important;
   }
 }
 

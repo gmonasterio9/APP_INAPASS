@@ -13,12 +13,6 @@ const routes: Routes = [
     pathMatch: 'full'
   },
   {
-    path: 'eventos',
-    loadChildren: () => import('./eventos/eventos.module').then( m => m.EventosPageModule),
-    canActivate: [authGuard]
-
-  },
-  {
     path: 'registrar-asistencia',
     loadChildren: () => import('./registrar-asistencia/registrar-asistencia.module').then( m => m.RegistrarAsistenciaPageModule),
     canActivate: [authGuard]

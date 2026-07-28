@@ -48,15 +48,25 @@ export class RegistrarAsistenciaPage implements OnDestroy, ViewWillEnter, ViewWi
     this.contadorAsistentes = this.extraerTotalAsistentes(this.evento);
   }
 
-  ingresoManual(rut?: string) {
+  ingresoManual(datos?: string | { rut?: string; nombre?: string; correo?: string }) {
     this.state = {
       eventId: this.evento.Id,
       eventArea: this.evento.businessArea__c,
       capturingBranch__c: this.evento.organizingHeadquarters__c
     };
 
-    if (rut) {
-      this.state.rut = rut;
+    if (typeof datos === 'string') {
+      this.state.rut = datos;
+    } else if (datos) {
+      if (datos.rut) {
+        this.state.rut = datos.rut;
+      }
+      if (datos.nombre) {
+        this.state.nombre = datos.nombre;
+      }
+      if (datos.correo) {
+        this.state.correo = datos.correo;
+      }
     }
     this.nav.navigateForward(['/registro-manual'], { state: this.state });
   }
@@ -302,11 +312,41 @@ export class RegistrarAsistenciaPage implements OnDestroy, ViewWillEnter, ViewWi
         [invitado, registroId, attendee] = this.utils.buscarEnArray(rut, "identificationNumber", this.registros);
       }
       else{
-        const regex = /^a12Vt/;
-        if (regex.test(barcode)) {
-          [invitado, registroId, attendee] = this.utils.buscarEnArray(barcode, "qr", this.registros);
+        if (/^a12Vt/i.test(barcode)) {
+          tipoQR = 'entrada';
+          const [encontrado, registroLocal, yaAsistio] = this.utils.buscarEnArray(barcode, 'qr', this.registros);
+          attendee = yaAsistio;
+          if (encontrado && registroLocal) {
+            invitado = true;
+            registroId = registroLocal;
+          } else if (!yaAsistio) {
+            // QR de entrada: marcar asistencia con el id del código escaneado
+            invitado = true;
+            registroId = barcode.trim();
+          }
+        }
+        else if (this.utils.esQrColaborador(barcode)) {
+          // QR colaborador: VCARD (BEGIN:VCARD ... EMAIL ... END:VCARD)
+          tipoQR = 'colaborador';
+          const colaborador = this.utils.parsearQrColaborador(barcode);
+          nombre = colaborador.nombre;
+          correo = colaborador.correo;
+
+          if (correo) {
+            [invitado, registroId, attendee] = this.utils.buscarEnArray(correo, 'email', this.registros);
+            if (!invitado) {
+              [invitado, registroId, attendee] = this.utils.buscarEnArray(correo, 'emailEvento', this.registros);
+            }
+          }
+
+          if (!attendee && !invitado) {
+            await this.dialog.dismissLoading();
+            this.ingresoManual({ nombre, correo });
+            return;
+          }
         }
         else {
+          // QR credencial: token encodeado → info-credencial
           const datosCredencial = await this.eventos.getCredencial(barcode);
           if (datosCredencial.success){
             rut = datosCredencial.data.rut;
@@ -358,7 +398,7 @@ export class RegistrarAsistenciaPage implements OnDestroy, ViewWillEnter, ViewWi
           role: 'destructive',
           handler: () => {
             if (rut && rut.trim() !== '') {
-              this.ingresoManual(rut);
+              this.ingresoManual({ rut });
             } else {
               this.ingresoManual();
             }
