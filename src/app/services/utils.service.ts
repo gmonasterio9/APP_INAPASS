@@ -26,7 +26,25 @@ export class UtilsService {
 
   async tienePermisoCamara(): Promise<boolean> {
     if (this.esWeb()) {
-      return true;
+      if (!navigator?.mediaDevices?.getUserMedia) {
+        return false;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: this.restriccionesVideoCamara(true),
+          audio: false,
+        });
+        stream.getTracks().forEach((t) => t.stop());
+        return true;
+      } catch {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          stream.getTracks().forEach((t) => t.stop());
+          return true;
+        } catch {
+          return false;
+        }
+      }
     }
 
     let permission = await Camera.checkPermissions();
@@ -37,19 +55,62 @@ export class UtilsService {
     return permission.camera === 'granted' || permission.camera === 'limited';
   }
 
+  /** Tablets / equipos con poca RAM o CPU. */
+  dispositivoLimitado(): boolean {
+    const nav = navigator as Navigator & {
+      deviceMemory?: number;
+      connection?: { saveData?: boolean; effectiveType?: string };
+    };
+    const cores = navigator.hardwareConcurrency || 4;
+    const mem = nav.deviceMemory;
+    const saveData = !!nav.connection?.saveData;
+    const redLenta = /2g/.test(nav.connection?.effectiveType || '');
+    const tablet =
+      window.matchMedia('(min-width: 600px) and (pointer: coarse)').matches
+      || /iPad|Tablet|Android(?!.*Mobile)/i.test(navigator.userAgent);
+
+    if (mem != null && mem <= 2) {
+      return true;
+    }
+    if (cores <= 2) {
+      return true;
+    }
+    if (tablet && (cores <= 4 || (mem != null && mem <= 4))) {
+      return true;
+    }
+    return saveData || redLenta;
+  }
+
+  private restriccionesVideoCamara(facingEnvironment = true): MediaTrackConstraints {
+    const limitado = this.dispositivoLimitado();
+    return {
+      facingMode: facingEnvironment ? { ideal: 'environment' } : { ideal: 'user' },
+      width: limitado ? { ideal: 640, max: 960 } : { ideal: 1280, max: 1920 },
+      height: limitado ? { ideal: 480, max: 720 } : { ideal: 720, max: 1080 },
+      frameRate: limitado ? { ideal: 10, max: 15 } : { ideal: 15, max: 24 },
+    };
+  }
+
   obtenerOpcionesFotoCarnet(): ImageOptions {
+    const quality = this.dispositivoLimitado() ? 65 : 85;
+    const width = this.dispositivoLimitado() ? 1280 : 1920;
+
     if (this.esAppNativa()) {
       return {
-        quality: 90,
+        quality,
+        width,
         source: CameraSource.Camera,
         resultType: CameraResultType.Base64,
+        correctOrientation: true,
       };
     }
 
     return {
-      quality: 90,
+      quality,
+      width,
       source: CameraSource.Prompt,
       resultType: CameraResultType.Base64,
+      correctOrientation: true,
       webUseInput: true,
       promptLabelHeader: 'Escanear carnet',
       promptLabelPhoto: 'Elegir de galería',
@@ -115,28 +176,75 @@ export class UtilsService {
       closeButton.onclick = () => void cerrar(undefined);
     }
 
-    const qrSize = Math.min(300, Math.max(220, Math.floor(window.innerWidth * 0.72)));
-    const config = {
-      fps: 15,
+    const limitado = this.dispositivoLimitado();
+    const minEdge = Math.min(window.innerWidth, window.innerHeight);
+    const qrSize = Math.min(
+      limitado ? 220 : 280,
+      Math.max(limitado ? 160 : 200, Math.floor(minEdge * (limitado ? 0.55 : 0.68))),
+    );
+
+    const configBase = {
+      fps: limitado ? 8 : 12,
       qrbox: { width: qrSize, height: qrSize },
       aspectRatio: 1.0,
+      disableFlip: limitado,
     };
 
     const onSuccess = (decodedText: string) => void cerrar(decodedText);
     const onError = () => { /* sin código en este frame */ };
 
-    const camaras = [{ facingMode: 'environment' }, { facingMode: 'user' }] as const;
+    type IntentoCamara = { camara: string | MediaTrackConstraints; videoConstraints?: MediaTrackConstraints };
+    const intentos: IntentoCamara[] = [];
 
-    for (const camara of camaras) {
+    try {
+      const devices = await Html5Qrcode.getCameras();
+      const trasera = devices.find((d) => /back|rear|trasera|environment|posterior/i.test(d.label));
+      const elegida = trasera?.id || devices[0]?.id;
+      if (elegida) {
+        intentos.push({
+          camara: elegida,
+          videoConstraints: limitado
+            ? { width: { ideal: 640, max: 960 }, height: { ideal: 480, max: 720 }, frameRate: { ideal: 10, max: 15 } }
+            : undefined,
+        });
+      }
+    } catch (error) {
+      console.warn('No se listaron cámaras', error);
+    }
+
+    intentos.push(
+      { camara: this.restriccionesVideoCamara(true) },
+      { camara: { facingMode: 'environment' } },
+      { camara: this.restriccionesVideoCamara(false) },
+      { camara: { facingMode: 'user' } },
+    );
+
+    for (const intento of intentos) {
       try {
-        await this.scannerWeb.start(camara, config, onSuccess, onError);
+        const cfg = {
+          ...configBase,
+          ...(intento.videoConstraints ? { videoConstraints: intento.videoConstraints } : {}),
+        };
+        await this.scannerWeb.start(intento.camara as any, cfg, onSuccess, onError);
         return;
       } catch (error) {
-        console.warn('No se pudo iniciar cámara', camara, error);
+        console.warn('No se pudo iniciar cámara', intento.camara, error);
+        try {
+          if (this.scannerWeb?.isScanning) {
+            await this.scannerWeb.stop();
+          }
+        } catch {
+          // ignore
+        }
       }
     }
 
     await cerrar(undefined);
+    await this.dialog.showAlert({
+      header: 'Cámara no disponible',
+      message: 'No se pudo iniciar la cámara en este dispositivo. Pruebe acercar más el código o use ingreso manual.',
+      buttons: [{ text: 'Aceptar', role: 'ok' }],
+    });
   }
 
   private construirScannerWeb(): void {

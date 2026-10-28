@@ -73,7 +73,11 @@ export class RegistrarAsistenciaPage implements OnDestroy, ViewWillEnter, ViewWi
 
   async ionViewWillEnter() {
     if (!this.evento) {
-      this.evento = this.asistencia.obtenerEventoActivo();
+      this.evento = await this.asistencia.obtenerEventoActivoAsync();
+      if (this.evento) {
+        this.asistencia.establecerEventoActivo(this.evento);
+        this.contadorAsistentes = this.extraerTotalAsistentes(this.evento);
+      }
     }
     this.suscribirEventosAsistencia();
     await this.iniciarPantalla();
@@ -510,7 +514,7 @@ export class RegistrarAsistenciaPage implements OnDestroy, ViewWillEnter, ViewWi
 
     this.detenerRecursosPantalla();
     await this.auth.clearAuth();
-    this.asistencia.limpiarEventoActivo();
+    await this.asistencia.limpiarEventoActivo();
     this.router.navigate(['/home'], { queryParams: { logout: true } });
   }
 

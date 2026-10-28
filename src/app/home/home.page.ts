@@ -18,6 +18,7 @@ import { IonInput } from '@ionic/angular';
 export class HomePage {
   form!: FormGroup;
   pin: string[] = ['', '', '', '', '', ''];
+  private ingresando = false;
 
   @ViewChildren('pinInput') pinInputs!: QueryList<IonInput>;
 
@@ -46,20 +47,52 @@ export class HomePage {
         this.resetForm();
       }
     });
+    void this.restaurarSesionSiExiste();
   }
 
   ngAfterViewInit() {
     this.focusInput(0);
   }
 
+  /** Si hay token vigente + evento guardado, salta el PIN. */
+  private async restaurarSesionSiExiste(): Promise<void> {
+    const params = this.route.snapshot.queryParamMap;
+    if (params.get('logout') || params.get('sessionExpired')) {
+      return;
+    }
+
+    const valida = await this.auth.isAuthenticated();
+    if (!valida) {
+      return;
+    }
+
+    const evento = await this.asistencia.obtenerEventoActivoAsync();
+    if (!evento) {
+      return;
+    }
+
+    this.asistencia.establecerEventoActivo(evento);
+    await this.nav.navigateRoot(['/registrar-asistencia'], { state: evento });
+  }
+
   onInputChange(event: any, index: number) {
-    const value = event.detail.value || '';
-  
+    const raw = `${event.detail.value ?? ''}`;
+    // Solo un dígito numérico por casilla
+    const value = raw.replace(/\D/g, '').slice(-1);
+    if (value !== raw) {
+      this.form.get(`pin${index}`)?.setValue(value, { emitEvent: false });
+    }
+
     if (value.length > 0 && index < this.pin.length - 1) {
       this.focusInput(index + 1);
     }
-  
+
     this.updatePinControl();
+
+    const pinCompleto = `${this.form.get('Pin')?.value || ''}`;
+    if (pinCompleto.length === 6 && !this.ingresando) {
+      void this.login();
+    }
   }
   
 
@@ -83,43 +116,47 @@ export class HomePage {
   }
   
   async login() {
-    this.updatePinControl(); 
-    if (this.form.valid) {
-      const loading = await this.dialog.showLoading({ message: 'Ingresando...' });
+    this.updatePinControl();
+    if (!this.form.valid || this.ingresando) {
+      return;
+    }
 
-      try {
-        const response = await this.eventos.loginValidation({ Pin: this.form.get('Pin')?.value });
-        const message = response.message;
+    this.ingresando = true;
+    const loading = await this.dialog.showLoading({ message: 'Ingresando...' });
 
-        if (response.success) {
-          const auth = {
-            token: response.data.access_token,
-            expires: response.data.expires,
-          };
+    try {
+      const response = await this.eventos.loginValidation({ Pin: this.form.get('Pin')?.value });
+      const message = response.message;
 
-          await this.auth.setAuth(auth);
-          this.asistencia.establecerEventoActivo(response.data.evento.records[0]);
-          this.nav.navigateForward(['/registrar-asistencia'], { state: response.data.evento.records[0] });
-        } else {
-          this.resetForm();
+      if (response.success) {
+        const auth = {
+          token: response.data.access_token,
+          expires: response.data.expires,
+        };
 
-          await this.dialog.showAlert({
-            header: 'Error al ingresar',
-            message,
-            buttons: [{ text: 'Aceptar', role: 'ok' }],
-          });
-        }
-      } catch (error) {
+        await this.auth.setAuth(auth);
+        this.asistencia.establecerEventoActivo(response.data.evento.records[0]);
+        this.nav.navigateForward(['/registrar-asistencia'], { state: response.data.evento.records[0] });
+      } else {
         this.resetForm();
 
         await this.dialog.showAlert({
-          header: 'Error',
-          message: 'Ocurrió un error inesperado. Por favor intenta nuevamente.',
+          header: 'Error al ingresar',
+          message,
           buttons: [{ text: 'Aceptar', role: 'ok' }],
         });
-      } finally {
-        await this.dialog.dismissLoading();
       }
+    } catch (error) {
+      this.resetForm();
+
+      await this.dialog.showAlert({
+        header: 'Error',
+        message: 'Ocurrió un error inesperado. Por favor intenta nuevamente.',
+        buttons: [{ text: 'Aceptar', role: 'ok' }],
+      });
+    } finally {
+      this.ingresando = false;
+      await this.dialog.dismissLoading();
     }
   }
 
@@ -134,6 +171,6 @@ export class HomePage {
   }
 
   async politicasTap() {
-    this.utils.openLink('https://portales.inacap.cl/politicas-de-privacidad');
+    this.utils.openLink('https://portal.inacap.cl/politicas-de-privacidad');
   }
 }

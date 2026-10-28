@@ -4,6 +4,7 @@ import { UtilsService } from './utils.service';
 import { DialogService } from './dialog.service';
 import { Subject } from 'rxjs';
 import { NavController } from '@ionic/angular';
+import { Preferences } from '@capacitor/preferences';
 
 export type RegistroResultado = {
   success: boolean;
@@ -18,15 +19,19 @@ export type RegistroResultado = {
 export class RegistroAsistenciaService {
   asistenciaRegistrada$ = new Subject<void>();
   eventoRefresh$ = new Subject<void>();
+  private readonly storageEvento = 'evento_activo';
   private eventoActivo: any = null;
   private sesionActiva: any = null;
+  private cargaEvento?: Promise<any | null>;
 
   constructor(    
     private eventos: EventosService,
     private utils: UtilsService,
     private dialog: DialogService,
     private nav: NavController
-  ) { }
+  ) {
+    void this.cargarEventoPersistido();
+  }
 
   async registrarContactoYparticipante(bodyContacto: any, evento: string): Promise<RegistroResultado> {
     try {
@@ -188,22 +193,56 @@ export class RegistroAsistenciaService {
   }
 
   establecerEventoActivo(evento: any): void {
-    if (evento) {
-      this.eventoActivo = evento;
+    if (!evento) {
+      return;
     }
+    this.eventoActivo = evento;
+    void Preferences.set({
+      key: this.storageEvento,
+      value: JSON.stringify(evento),
+    });
   }
 
   obtenerEventoActivo(): any {
     return this.eventoActivo;
   }
 
+  async obtenerEventoActivoAsync(): Promise<any | null> {
+    if (this.eventoActivo) {
+      return this.eventoActivo;
+    }
+    return this.cargarEventoPersistido();
+  }
+
   obtenerSesionActiva(): any {
     return this.sesionActiva;
   }
 
-  limpiarEventoActivo(): void {
+  async limpiarEventoActivo(): Promise<void> {
     this.eventoActivo = null;
     this.sesionActiva = null;
+    await Preferences.remove({ key: this.storageEvento });
+  }
+
+  private async cargarEventoPersistido(): Promise<any | null> {
+    if (this.cargaEvento) {
+      return this.cargaEvento;
+    }
+    this.cargaEvento = (async () => {
+      try {
+        const result = await Preferences.get({ key: this.storageEvento });
+        if (!result.value) {
+          return null;
+        }
+        this.eventoActivo = JSON.parse(result.value);
+        return this.eventoActivo;
+      } catch {
+        return null;
+      } finally {
+        this.cargaEvento = undefined;
+      }
+    })();
+    return this.cargaEvento;
   }
 
   async cargarSesionActiva(eventId?: string): Promise<any | null> {

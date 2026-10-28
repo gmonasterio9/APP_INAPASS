@@ -70,12 +70,41 @@ ion-button.btn-large {
 ion-toolbar {
   --background: black;
   --color: white;
-  height: 70px;
-  display: flex;
+  --min-height: 56px;
+  height: 56px;
+  position: relative;
+
+  ion-buttons {
+    position: relative;
+    z-index: 2;
+  }
 
   ion-title {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    padding-inline: 48px;
     text-align: center;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 56px;
+    letter-spacing: normal;
+    white-space: nowrap;
+    overflow: visible;
+    pointer-events: none;
   }
+
+  ion-title::part(native) {
+    text-align: center;
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
+    padding: 0;
+  }
+
   .icono {
     margin-left: 10px;
   }
@@ -109,9 +138,10 @@ ion-toolbar {
   font-family: var(--ion-font-family);
   font-weight: 700;
   font-size: 18px;
-  line-height: 100%;
-  letter-spacing: 0%;
-  --background: #050508;
+  line-height: 1.3;
+  letter-spacing: 0;
+  color: #050508;
+  text-align: center;
 }
 .divider {
   height: 1px;
