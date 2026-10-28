@@ -512,9 +512,25 @@ export class UtilsService {
           }
 
           const params = new URLSearchParams(match[1].split('?')[1] ?? '');
-          const chl = params.get('chl');
+          const codigoQr = params.get('data') ?? params.get('chl') ?? '';
+          const id15 = (v: string) => `${v}`.trim().substring(0, 15);
 
-          if (buscarNormalizado === chl) {
+          if (
+            codigoQr &&
+            (buscarNormalizado === codigoQr || id15(buscarNormalizado) === id15(codigoQr))
+          ) {
+            encontrado = true;
+            registroId = persona.eventRegistrationId;
+            if (persona['invitationStatus'] === 'Asistió a evento') {
+              attendee = true;
+            }
+            break;
+          }
+
+          if (
+            persona.eventRegistrationId &&
+            id15(persona.eventRegistrationId) === id15(buscarNormalizado)
+          ) {
             encontrado = true;
             registroId = persona.eventRegistrationId;
             if (persona['invitationStatus'] === 'Asistió a evento') {

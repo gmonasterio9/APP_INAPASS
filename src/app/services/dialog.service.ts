@@ -116,6 +116,14 @@ export class DialogService {
     return loading;
   }
   public async dismissLoading(data?: any): Promise<boolean> {
-    return this.loadingCtrl.dismiss(data);
+    try {
+      const top = await this.loadingCtrl.getTop();
+      if (!top) {
+        return false;
+      }
+      return await this.loadingCtrl.dismiss(data);
+    } catch {
+      return false;
+    }
   }
 }

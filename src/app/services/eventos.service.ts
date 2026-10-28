@@ -9,8 +9,17 @@ import { AuthService } from './auth.service';
 })
 export class EventosService {
   baseUrl: string;
-  constructor(private auth: AuthService) { 
-    this.baseUrl = `${environment.apiUrl}/api/v1`
+  constructor(private auth: AuthService) {
+    const api = `${environment.apiUrl || ''}`.replace(/\/$/, '');
+    this.baseUrl = `${api}/api/v1`;
+  }
+
+  private absolutizarUrl(url: string): string {
+    if (/^https?:\/\//i.test(url)) {
+      return url;
+    }
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    return `${origin}${url.startsWith('/') ? url : `/${url}`}`;
   }
 
   public get = async (url: string) => {
@@ -19,7 +28,7 @@ export class EventosService {
       throw Error('ACCESS_TOKEN_MISSING');
     }
     const options: HttpOptions = {
-      url: url,
+      url: this.absolutizarUrl(url),
       responseType: 'json',
       headers: {
         'Content-Type': 'application/json',
@@ -31,9 +40,11 @@ export class EventosService {
       const response = await CapacitorHttp.get(options);
       if (response.status == 200) {
         return response.data;
-      } else {
-        return Promise.reject(response);
       }
+      if (response?.data && typeof response.data === 'object') {
+        return response.data;
+      }
+      return Promise.reject(response);
     }
     catch (error) {
       return Promise.reject(error);
@@ -88,13 +99,13 @@ export class EventosService {
     }
     const options: HttpOptions = {
       method: 'patch',
-      url: url,
+      url: this.absolutizarUrl(url),
       responseType: 'json',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${auth.token}`
       },
-      data: params
+      data: params ?? {}
     };
 
     try {
@@ -154,9 +165,54 @@ export class EventosService {
   agregarLead(params: any){
     return this.post(`${this.baseUrl}/crear-lead`, params);
   }
-  marcarAsistencia(idParticipante: string){
-    return this.patch(`${this.baseUrl}/marcar-asistencia/${idParticipante}`);
+  getSesiones(eventId: string) {
+    return this.getConFetch(
+      `${this.baseUrl}/evento/sesiones?eventId=${encodeURIComponent(eventId)}`
+    );
   }
+
+  /**
+   * PATCH /api/v1/sesion/{numeroSesion}/asistencia/{idDelQR}
+   * Back: MarcaAsistenciaSesionQR(idQR, numeroSesion:int, bool). Sin body.
+   */
+  marcarAsistencia(numeroSesion: string | number, idDelQR: string) {
+    const url = `${this.baseUrl}/sesion/${encodeURIComponent(String(numeroSesion))}/asistencia/${encodeURIComponent(idDelQR)}`;
+    console.log('[Inapass] PATCH asistencia →', url);
+    return this.patch(url, {});
+  }
+
+  private async getConFetch(url: string) {
+    const auth = await this.auth.getAuth();
+    if (auth == null) {
+      throw Error('ACCESS_TOKEN_MISSING');
+    }
+    const absoluteUrl = this.absolutizarUrl(url);
+    console.log('[Inapass] GET →', absoluteUrl);
+
+    const response = await fetch(absoluteUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${auth.token}`,
+      },
+      cache: 'no-store',
+    });
+
+    let data: any = null;
+    try {
+      data = await response.json();
+    } catch {
+      data = null;
+    }
+
+    console.log('[Inapass] respuesta →', response.status, data);
+
+    if (response.ok || (data && typeof data === 'object')) {
+      return data;
+    }
+    return Promise.reject({ status: response.status, data, url: absoluteUrl });
+  }
+
   loginValidation(params: any){
     return this.post(`${this.baseUrl}/login`, params, false);
   }

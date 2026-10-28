@@ -286,7 +286,8 @@ export class RegistrarAsistenciaPage implements OnDestroy, ViewWillEnter, ViewWi
 
     this.escaneandoQR = true;
     try {
-      const barcode = await this.utils.escanearCodigoQR();
+      const barcodeRaw = await this.utils.escanearCodigoQR();
+      const barcode = `${barcodeRaw ?? ''}`.trim();
       if (!barcode) {
         return;
       }
@@ -307,22 +308,24 @@ export class RegistrarAsistenciaPage implements OnDestroy, ViewWillEnter, ViewWi
       if(posicionInicial != -1){
         let inicio = barcode.substring(posicionInicial + 'RUN='.length).trim();
         let posicionFinal = inicio.indexOf("&");
-        rut = inicio.substring(0, posicionFinal).trim();
+        rut = (posicionFinal === -1 ? inicio : inicio.substring(0, posicionFinal)).trim();
         tipoQR = 'carnet';
         [invitado, registroId, attendee] = this.utils.buscarEnArray(rut, "identificationNumber", this.registros);
       }
       else{
-        if (/^a12Vt/i.test(barcode)) {
+        // Id Event_Registration__c 15 (a12V+11) o 18 (a12V+14), o URL Lightning
+        const matchSalesforce =
+          barcode.match(/Event_Registration__c\/(a12V[a-zA-Z0-9]{11,14})/i)
+          || barcode.match(/(a12V[a-zA-Z0-9]{11,14})/i);
+        if (matchSalesforce) {
           tipoQR = 'entrada';
-          const [encontrado, registroLocal, yaAsistio] = this.utils.buscarEnArray(barcode, 'qr', this.registros);
+          // Doc: idDelQR = Id del registro (Event_Registration__c)
+          const idDelQR = matchSalesforce[1] || matchSalesforce[0];
+          const [, , yaAsistio] = this.utils.buscarEnArray(idDelQR, 'qr', this.registros);
           attendee = yaAsistio;
-          if (encontrado && registroLocal) {
+          if (!yaAsistio) {
             invitado = true;
-            registroId = registroLocal;
-          } else if (!yaAsistio) {
-            // QR de entrada: marcar asistencia con el id del código escaneado
-            invitado = true;
-            registroId = barcode.trim();
+            registroId = idDelQR;
           }
         }
         else if (this.utils.esQrColaborador(barcode)) {
@@ -440,7 +443,7 @@ export class RegistrarAsistenciaPage implements OnDestroy, ViewWillEnter, ViewWi
   async procesarRegistro(rut: string, invitado: boolean, registroId: string, tipoQR: string) {
 
     if (invitado) {
-      await this.asistencia.marcarAsistencia(registroId, this.evento.Id, 1);
+      await this.asistencia.marcarAsistencia(registroId, this.obtenerEventoId(), 1);
       return;
     }
 
