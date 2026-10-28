@@ -13,7 +13,7 @@
       "attributes": [],
       "versionCode": 1001,
       "versionName": "1.0.1",
-      "outputFile": "Inapass-1.0.1-release.apk"
+      "outputFile": "Inapass.apk"
     }
   ],
   "elementType": "File",
@@ -22,14 +22,14 @@
       "minApi": 28,
       "maxApi": 30,
       "baselineProfiles": [
-        "baselineProfiles/1/Inapass-1.0.1-release.dm"
+        "baselineProfiles/1/Inapass.dm"
       ]
     },
     {
       "minApi": 31,
       "maxApi": 2147483647,
       "baselineProfiles": [
-        "baselineProfiles/0/Inapass-1.0.1-release.dm"
+        "baselineProfiles/0/Inapass.dm"
       ]
     }
   ],
