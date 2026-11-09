@@ -1,8 +1,8 @@
 {
-    "/api": {
-        "target": "https://siga.inacap.cl/Inacap.Siga.Inapass",
-        "secure": false,
-        "changeOrigin": true,
-        "timeout": 3600000
-    }
+  "/api": {
+    "target": "https://siga.desa.inacap.cl/Inacap.Siga.Inapass",
+    "secure": false,
+    "changeOrigin": true,
+    "timeout": 3600000
+  }
 }
